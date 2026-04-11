@@ -62,7 +62,7 @@ spec:
   storageClassName: jerney-ebs-sc
   resources:
     requests:
-      storage: 10Gi
+      storage: 1Gi
 
 ---
 # ---- PostgreSQL Deployment ----
