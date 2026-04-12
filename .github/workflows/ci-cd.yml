@@ -19,8 +19,8 @@ permissions:
 
 env:
   DOCKER_REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/${{ github.repository }}/jerney-backend
-  FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/jerney-frontend
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/jerney/jerney-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/jerney/jerney-frontend
 
 jobs:
   # ==============================================================
@@ -114,7 +114,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/jerney-${{ matrix.component }}
+          images: ghcr.io/${{ github.repository_owner }}/jerney/jerney-${{ matrix.component }}
           tags: |
             type=sha,prefix=
             type=ref,event=branch
