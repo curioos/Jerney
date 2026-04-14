@@ -1,0 +1,61 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-privileged-pods
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: disallow-host-namespace-sharing
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - Pod
+      validate:
+        message: "Pods in namespace jerney cannot use hostNetwork, hostPID, or hostIPC."
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.hostNetwork || `false` }}"
+                operator: Equals
+                value: true
+              - key: "{{ request.object.spec.hostPID || `false` }}"
+                operator: Equals
+                value: true
+              - key: "{{ request.object.spec.hostIPC || `false` }}"
+                operator: Equals
+                value: true
+    - name: disallow-privileged-containers
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - Pod
+      validate:
+        message: "Privileged containers and privilege escalation are not allowed in namespace jerney."
+        foreach:
+          - list: "request.object.spec.containers"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.securityContext.privileged || `false` }}"
+                    operator: Equals
+                    value: true
+                  - key: "{{ element.securityContext.allowPrivilegeEscalation || `false` }}"
+                    operator: Equals
+                    value: true
+          - list: "request.object.spec.initContainers || `[]`"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.securityContext.privileged || `false` }}"
+                    operator: Equals
+                    value: true
+                  - key: "{{ element.securityContext.allowPrivilegeEscalation || `false` }}"
+                    operator: Equals
+                    value: true

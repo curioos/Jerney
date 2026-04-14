@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: jerney
+  namespace: argocd
+spec:
+  description: Jerney application project boundary
+  sourceRepos:
+    - https://github.com/curioos/Jerney.git
+  destinations:
+    - namespace: jerney
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: storage.k8s.io
+      kind: StorageClass

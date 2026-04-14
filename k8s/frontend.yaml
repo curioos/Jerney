@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jerney-frontend
+  namespace: jerney
+  labels:
+    app.kubernetes.io/name: jerney-frontend
+    app.kubernetes.io/part-of: jerney
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jerney-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jerney-frontend
+        app.kubernetes.io/part-of: jerney
+        app.kubernetes.io/component: frontend
+    spec:
+      automountServiceAccountToken: false
+      tolerations:
+        - key: "karpenter.sh/disrupted"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: frontend
+          image: ghcr.io/curioos/jerney/jerney-frontend:052475d
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 101
+            capabilities:
+              drop:
+                - ALL
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jerney-frontend
+  namespace: jerney
+  labels:
+    app.kubernetes.io/name: jerney-frontend
+    app.kubernetes.io/part-of: jerney
+    app.kubernetes.io/component: frontend
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: jerney-frontend
+  ports:
+    - name: http-web
+      port: 80
+      targetPort: 8080
+      protocol: TCP
