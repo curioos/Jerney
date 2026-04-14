@@ -1,16 +1,16 @@
-# Legacy file retained as a pointer.
-# The deployable manifests now live in split files in this directory and are
-# assembled by kustomize via kustomization.yaml.
-#
-# Use:
-#   kubectl apply -k k8s/
-#
-# Split files:
-#   - namespace.yaml
-#   - storage.yaml
-#   - db.yaml
-#   - backend.yaml
-#   - frontend.yaml
-#   - networkpolicies.yaml
-apiVersion: storage.k8s.io/v1
-
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
+          image: ghcr.io/curioos/jerney/jerney-frontend:b5ac5e4
