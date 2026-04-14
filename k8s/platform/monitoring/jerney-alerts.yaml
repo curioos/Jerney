@@ -1,0 +1,47 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: jerney-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: jerney.application
+      rules:
+        - alert: JerneyBackendTargetDown
+          expr: sum(up{namespace="jerney", service="jerney-backend"}) == 0
+          for: 5m
+          labels:
+            severity: critical
+            app: jerney
+          annotations:
+            summary: Jerney backend target is down
+            description: Prometheus has been unable to scrape the jerney-backend target for 5 minutes.
+        - alert: JerneyBackendHighErrorRate
+          expr: sum(rate(jerney_backend_http_requests_total{status_code=~"5.."}[5m])) / clamp_min(sum(rate(jerney_backend_http_requests_total[5m])), 0.001) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            app: jerney
+          annotations:
+            summary: Jerney backend 5xx error rate is elevated
+            description: More than 5% of Jerney backend responses have been 5xx for the last 10 minutes.
+        - alert: JerneyBackendHighLatencyP95
+          expr: histogram_quantile(0.95, sum(rate(jerney_backend_http_request_duration_seconds_bucket[5m])) by (le)) > 1
+          for: 10m
+          labels:
+            severity: warning
+            app: jerney
+          annotations:
+            summary: Jerney backend latency is elevated
+            description: Jerney backend 95th percentile latency has been above 1 second for the last 10 minutes.
+        - alert: JerneyPodsNotReady
+          expr: sum(kube_pod_status_ready{namespace="jerney", condition="false"}) > 0
+          for: 10m
+          labels:
+            severity: warning
+            app: jerney
+          annotations:
+            summary: One or more Jerney pods are not ready
+            description: At least one pod in namespace jerney has been unready for 10 minutes.

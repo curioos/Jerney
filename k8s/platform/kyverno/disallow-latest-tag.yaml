@@ -1,0 +1,31 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: validate-no-latest-tag
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - Pod
+      validate:
+        message: "Using :latest image tag or omitting an image tag is not allowed. Pin image tags for traceability."
+        deny:
+          conditions:
+            any:
+              - key: "{{ images.containers.*.tag }}"
+                operator: AnyIn
+                value:
+                  - latest
+                  - ""
+              - key: "{{ images.initContainers.*.tag || `[]` }}"
+                operator: AnyIn
+                value:
+                  - latest
+                  - ""

@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jerney-db-headless
+  namespace: jerney
+  labels:
+    app.kubernetes.io/name: jerney-db
+    app.kubernetes.io/part-of: jerney
+    app.kubernetes.io/component: database
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: jerney-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jerney-db
+  namespace: jerney
+  labels:
+    app.kubernetes.io/name: jerney-db
+    app.kubernetes.io/part-of: jerney
+    app.kubernetes.io/component: database
+spec:
+  serviceName: jerney-db-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jerney-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jerney-db
+        app.kubernetes.io/part-of: jerney
+        app.kubernetes.io/component: database
+    spec:
+      automountServiceAccountToken: false
+      tolerations:
+        - key: "karpenter.sh/disrupted"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: jerney-db-secret
+          volumeMounts:
+            - name: db-storage
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+  volumeClaimTemplates:
+    - metadata:
+        name: db-storage
+        labels:
+          app.kubernetes.io/part-of: jerney
+          app.kubernetes.io/component: database
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: jerney-ebs-sc
+        resources:
+          requests:
+            storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jerney-db
+  namespace: jerney
+  labels:
+    app.kubernetes.io/name: jerney-db
+    app.kubernetes.io/part-of: jerney
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: jerney-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
