@@ -18,6 +18,7 @@ async function initDB() {
         content TEXT NOT NULL,
         author VARCHAR(100) NOT NULL DEFAULT 'Anonymous',
         emoji VARCHAR(10) DEFAULT '✨',
+        created_by VARCHAR(100) NOT NULL DEFAULT 'anonymous',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -29,8 +30,18 @@ async function initDB() {
         post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
         author VARCHAR(100) NOT NULL DEFAULT 'Anonymous',
         content TEXT NOT NULL,
+        created_by VARCHAR(100) NOT NULL DEFAULT 'anonymous',
         created_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // Create index for faster queries
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
     `);
 
     console.log('✅ Database tables initialized');
