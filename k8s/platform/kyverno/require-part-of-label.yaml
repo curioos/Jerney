@@ -1,0 +1,40 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-part-of-label
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-standard-workload-labels
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - Deployment
+                - Service
+      validate:
+        message: "Deployments and Services in namespace jerney must set app.kubernetes.io/name, app.kubernetes.io/component, and app.kubernetes.io/part-of labels."
+        pattern:
+          metadata:
+            labels:
+              app.kubernetes.io/name: "?*"
+              app.kubernetes.io/component: "?*"
+              app.kubernetes.io/part-of: "?*"
+    - name: require-storage-labels
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - PersistentVolumeClaim
+      validate:
+        message: "PersistentVolumeClaims in namespace jerney must set app.kubernetes.io/component and app.kubernetes.io/part-of labels."
+        pattern:
+          metadata:
+            labels:
+              app.kubernetes.io/component: "?*"
+              app.kubernetes.io/part-of: "?*"

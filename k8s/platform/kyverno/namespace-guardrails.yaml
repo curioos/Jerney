@@ -1,0 +1,41 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: jerney-namespace-guardrails
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-automount-token-disabled
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - Deployment
+      validate:
+        message: "Deployments in namespace jerney must set automountServiceAccountToken to false."
+        pattern:
+          spec:
+            template:
+              spec:
+                automountServiceAccountToken: false
+    - name: restrict-service-types
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - Service
+      validate:
+        message: "Services in namespace jerney may only use ClusterIP or NodePort."
+        deny:
+          conditions:
+            all:
+              - key: "{{ request.object.spec.type || 'ClusterIP' }}"
+                operator: AnyNotIn
+                value:
+                  - ClusterIP
+                  - NodePort
