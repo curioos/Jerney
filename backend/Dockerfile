@@ -11,10 +11,10 @@ FROM node:20-alpine AS production
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Security: remove unnecessary packages
-# hadolint ignore=DL3018
 # Not version-pinned: node:20-alpine floats to whatever Alpine release is
 # current, and old apk package versions get pruned from the mirror — a
 # hardcoded version here would eventually break the build on rebuild.
+# hadolint ignore=DL3018
 RUN apk --no-cache add dumb-init
 
 WORKDIR /app
