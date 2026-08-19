@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jerney-db-backup
+  namespace: jerney
+  labels:
+    app.kubernetes.io/name: jerney-db-backup
+    app.kubernetes.io/part-of: jerney
+    app.kubernetes.io/component: backup
+  annotations:
+    # From `terraform apply` output `pg_backup_irsa_role_arn` in terraform/.
+    eks.amazonaws.com/role-arn: arn:aws:iam::<AWS_ACCOUNT_ID>:role/jerney-eks-pg-backup
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: jerney-db-backup
+  namespace: jerney
+  labels:
+    app.kubernetes.io/name: jerney-db-backup
+    app.kubernetes.io/part-of: jerney
+    app.kubernetes.io/component: backup
+spec:
+  schedule: "0 2 * * *" # 02:00 UTC daily
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: jerney-db-backup
+            app.kubernetes.io/part-of: jerney
+            app.kubernetes.io/component: backup
+        spec:
+          serviceAccountName: jerney-db-backup
+          automountServiceAccountToken: false
+          restartPolicy: OnFailure
+          tolerations:
+            - key: "karpenter.sh/disrupted"
+              operator: "Exists"
+              effect: "NoSchedule"
+          containers:
+            - name: pg-backup
+              image: postgres:16-alpine
+              # Lab-only: installs aws-cli at runtime via apk rather than a
+              # purpose-built, CI-published image — keeps this self-contained
+              # without adding a third image to the build/scan/push pipeline.
+              # A real deployment would build+pin this image like backend/frontend.
+              command:
+                - sh
+                - -c
+                - |
+                  set -euo pipefail
+                  apk add --no-cache aws-cli >/dev/null
+                  TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+                  FILE="/tmp/jerney-db-${TIMESTAMP}.sql.gz"
+                  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -h jerney-db -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$FILE"
+                  aws s3 cp "$FILE" "s3://${BACKUP_BUCKET}/postgres/${TIMESTAMP}.sql.gz"
+                  rm -f "$FILE"
+                  echo "Backup uploaded: postgres/${TIMESTAMP}.sql.gz"
+              env:
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: jerney-db-secret
+                      key: POSTGRES_USER
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: jerney-db-secret
+                      key: POSTGRES_PASSWORD
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: jerney-db-secret
+                      key: POSTGRES_DB
+                - name: BACKUP_BUCKET
+                  # Must match pg_backup_bucket_name in terraform/bootstrap.
+                  value: "jerney-pg-backups-REPLACE_WITH_YOUR_ACCOUNT_ID"
+                - name: AWS_REGION
+                  value: "ap-south-1"
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop:
+                    - ALL

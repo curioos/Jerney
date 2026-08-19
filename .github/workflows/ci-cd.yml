@@ -29,7 +29,6 @@ jobs:
   lint:
     name: "🔍 Lint Code"
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       matrix:
         component: [backend, frontend]
@@ -140,7 +139,6 @@ jobs:
   image-scan:
     name: "🔬 Scan ${{ matrix.component }} Image"
     runs-on: ubuntu-latest
-    continue-on-error: true
     needs: build
     strategy:
       matrix:
@@ -170,7 +168,6 @@ jobs:
   iac-scan:
     name: "🏗️ IaC Security Scan"
     runs-on: ubuntu-latest
-    continue-on-error: true
     needs: lint
     steps:
       - name: Checkout code
@@ -199,7 +196,6 @@ jobs:
   dockerfile-lint:
     name: "📋 Dockerfile Lint"
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       matrix:
         component: [backend, frontend]
@@ -215,12 +211,13 @@ jobs:
 
   # ==============================================================
   # STAGE 7: Update K8s Manifest with New Image Tag
-  # Only runs on push to main (not on PRs)
+  # Only runs on push to devops (the GitOps source branch ArgoCD tracks)
   # ==============================================================
   update-manifest:
     name: "🚀 Update K8s Manifest"
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' 
+    needs: [build, image-scan, iac-scan, dockerfile-lint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/devops'
     permissions:
       contents: write # Needed to push manifest changes
     steps:

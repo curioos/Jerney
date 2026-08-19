@@ -18,6 +18,7 @@ async function initDB() {
         content TEXT NOT NULL,
         author VARCHAR(100) NOT NULL DEFAULT 'Anonymous',
         emoji VARCHAR(10) DEFAULT '✨',
+        created_by VARCHAR(50),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -29,6 +30,7 @@ async function initDB() {
         post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
         author VARCHAR(100) NOT NULL DEFAULT 'Anonymous',
         content TEXT NOT NULL,
+        created_by VARCHAR(50),
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);

@@ -1,0 +1,7 @@
+# Copy to terraform/backend.hcl (gitignored — contains account-specific values)
+# and run: terraform init -backend-config=backend.hcl
+#
+# bucket/region must match what you set in terraform/bootstrap/terraform.tfvars
+
+bucket = "jerney-tf-state-REPLACE_WITH_YOUR_ACCOUNT_ID"
+region = "ap-south-1"

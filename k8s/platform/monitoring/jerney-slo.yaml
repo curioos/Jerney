@@ -1,0 +1,93 @@
+# ==============================================================
+# Jerney SLOs — multi-window, multi-burn-rate alerting
+# ==============================================================
+# Replaces static thresholds (">5% errors for 10m", "p95 >1s for 10m")
+# with alerts on error-budget burn rate, per Google's SRE workbook:
+# https://sre.google/workbook/alerting-on-slos/
+#
+# Two SLOs over a 30-day window:
+#   - Availability: 99.5% of requests are non-5xx (0.5% error budget)
+#   - Latency:      99% of requests complete under 500ms (1% error budget)
+#
+# burn_rate = bad_event_ratio / error_budget. A burn rate of 14.4 exhausts
+# the full 30-day budget in ~2 days if sustained; a burn rate of 6 exhausts
+# it in ~5 days. Each alert requires BOTH a short and a long window to
+# agree (long window = confidence it's not a blip, short window = the
+# alert clears quickly once the burn stops), rather than firing on one
+# noisy data point.
+# ==============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: jerney-slo
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: jerney.slo.recording
+      rules:
+        - record: jerney:http_availability_errors:ratio_rate5m
+          expr: sum(rate(jerney_backend_http_requests_total{status_code=~"5.."}[5m])) / clamp_min(sum(rate(jerney_backend_http_requests_total[5m])), 0.001)
+        - record: jerney:http_availability_errors:ratio_rate30m
+          expr: sum(rate(jerney_backend_http_requests_total{status_code=~"5.."}[30m])) / clamp_min(sum(rate(jerney_backend_http_requests_total[30m])), 0.001)
+        - record: jerney:http_availability_errors:ratio_rate1h
+          expr: sum(rate(jerney_backend_http_requests_total{status_code=~"5.."}[1h])) / clamp_min(sum(rate(jerney_backend_http_requests_total[1h])), 0.001)
+        - record: jerney:http_availability_errors:ratio_rate6h
+          expr: sum(rate(jerney_backend_http_requests_total{status_code=~"5.."}[6h])) / clamp_min(sum(rate(jerney_backend_http_requests_total[6h])), 0.001)
+
+        - record: jerney:http_latency_slow:ratio_rate5m
+          expr: 1 - (sum(rate(jerney_backend_http_request_duration_seconds_bucket{le="0.5"}[5m])) / clamp_min(sum(rate(jerney_backend_http_request_duration_seconds_count[5m])), 0.001))
+        - record: jerney:http_latency_slow:ratio_rate30m
+          expr: 1 - (sum(rate(jerney_backend_http_request_duration_seconds_bucket{le="0.5"}[30m])) / clamp_min(sum(rate(jerney_backend_http_request_duration_seconds_count[30m])), 0.001))
+        - record: jerney:http_latency_slow:ratio_rate1h
+          expr: 1 - (sum(rate(jerney_backend_http_request_duration_seconds_bucket{le="0.5"}[1h])) / clamp_min(sum(rate(jerney_backend_http_request_duration_seconds_count[1h])), 0.001))
+        - record: jerney:http_latency_slow:ratio_rate6h
+          expr: 1 - (sum(rate(jerney_backend_http_request_duration_seconds_bucket{le="0.5"}[6h])) / clamp_min(sum(rate(jerney_backend_http_request_duration_seconds_count[6h])), 0.001))
+
+    - name: jerney.slo.alerts
+      rules:
+        - alert: JerneyAvailabilitySLOFastBurn
+          # 14.4x burn rate on a 0.5% budget: ~7.2% error ratio
+          expr: jerney:http_availability_errors:ratio_rate5m > 0.072 and jerney:http_availability_errors:ratio_rate1h > 0.072
+          for: 2m
+          labels:
+            severity: critical
+            app: jerney
+            slo: availability
+          annotations:
+            summary: Jerney availability SLO burning fast — page
+            description: At current rate, the 30-day error budget (99.5% availability) will be exhausted in under 2 days. 5xx ratio has exceeded 7.2% over both the last 5m and 1h.
+        - alert: JerneyAvailabilitySLOSlowBurn
+          # 6x burn rate on a 0.5% budget: 3% error ratio
+          expr: jerney:http_availability_errors:ratio_rate30m > 0.03 and jerney:http_availability_errors:ratio_rate6h > 0.03
+          for: 15m
+          labels:
+            severity: warning
+            app: jerney
+            slo: availability
+          annotations:
+            summary: Jerney availability SLO burning slowly — ticket
+            description: At current rate, the 30-day error budget (99.5% availability) will be exhausted in under 5 days. 5xx ratio has exceeded 3% over both the last 30m and 6h.
+        - alert: JerneyLatencySLOFastBurn
+          # 14.4x burn rate on a 1% budget: 14.4% slow-request ratio
+          expr: jerney:http_latency_slow:ratio_rate5m > 0.144 and jerney:http_latency_slow:ratio_rate1h > 0.144
+          for: 2m
+          labels:
+            severity: critical
+            app: jerney
+            slo: latency
+          annotations:
+            summary: Jerney latency SLO burning fast — page
+            description: At current rate, the 30-day error budget (99% of requests under 500ms) will be exhausted in under 2 days. Slow-request ratio has exceeded 14.4% over both the last 5m and 1h.
+        - alert: JerneyLatencySLOSlowBurn
+          # 6x burn rate on a 1% budget: 6% slow-request ratio
+          expr: jerney:http_latency_slow:ratio_rate30m > 0.06 and jerney:http_latency_slow:ratio_rate6h > 0.06
+          for: 15m
+          labels:
+            severity: warning
+            app: jerney
+            slo: latency
+          annotations:
+            summary: Jerney latency SLO burning slowly — ticket
+            description: At current rate, the 30-day error budget (99% of requests under 500ms) will be exhausted in under 5 days. Slow-request ratio has exceeded 6% over both the last 30m and 6h.

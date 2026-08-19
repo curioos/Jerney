@@ -8,14 +8,17 @@ terraform {
     }
   }
 
-  # Uncomment and configure for remote state (recommended for teams)
-  # backend "s3" {
-  #   bucket         = "jerney-terraform-state"
-  #   key            = "eks/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   dynamodb_table = "jerney-tf-lock"
-  #   encrypt        = true
-  # }
+  # Remote state — bucket/table are provisioned once via terraform/bootstrap/.
+  # `bucket` and `region` are account-specific (S3 bucket names must be
+  # globally unique) and are supplied at init time rather than hardcoded.
+  # See terraform/backend.hcl.example.
+  #
+  #   terraform init -backend-config=backend.hcl
+  backend "s3" {
+    key            = "eks/terraform.tfstate"
+    dynamodb_table = "jerney-tf-lock"
+    encrypt        = true
+  }
 }
 
 provider "aws" {

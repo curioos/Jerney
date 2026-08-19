@@ -6,4 +6,5 @@ resources:
   - db.yaml
   - backend.yaml
   - frontend.yaml
+  - backup.yaml
   - networkpolicies.yaml

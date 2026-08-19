@@ -1,13 +1,21 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const client = require('prom-client');
 const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
+const authRoutes = require('./routes/auth');
 const db = require('./db');
+const { errorHandler } = require('./middleware/errorHandler');
+const { validateEnv } = require('./middleware/validateEnv');
+
+validateEnv();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const metricsRegistry = new client.Registry();
 
 client.collectDefaultMetrics({
@@ -30,9 +38,20 @@ const httpRequestDurationSeconds = new client.Histogram({
   registers: [metricsRegistry],
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Security middleware
+app.use(helmet());
+
+// CORS - restricted to the frontend origin only
+app.use(cors({
+  origin: FRONTEND_URL.split(',').map(url => url.trim()),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
 app.use((req, res, next) => {
   const endTimer = httpRequestDurationSeconds.startTimer();
 
@@ -53,6 +72,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// General rate limit, scoped to the API so Prometheus scraping /metrics is unaffected
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api', generalLimiter);
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Jerney API is vibing ✨' });
@@ -63,16 +90,27 @@ app.get('/metrics', async (req, res) => {
   res.end(await metricsRegistry.metrics());
 });
 
-// Routes
+// Auth routes (no auth required)
+app.use('/api/auth', authRoutes);
+
+// Routes (write operations protected inside each router)
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 
-// Initialize database and start server
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
 async function start() {
   try {
     await db.initDB();
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Jerney backend running on port ${PORT}`);
+      console.log(`✅ CORS enabled for: ${FRONTEND_URL}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);
@@ -81,3 +119,5 @@ async function start() {
 }
 
 start();
+
+module.exports = app;

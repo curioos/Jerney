@@ -27,3 +27,14 @@ variable "vpc_cidr" {
   type        = string
   default     = "10.0.0.0/16"
 }
+
+variable "pg_backup_bucket_name" {
+  description = "S3 bucket for PostgreSQL backups, created by terraform/bootstrap — referenced here read-only so this stack can never destroy it"
+  type        = string
+}
+
+variable "pg_backup_service_account" {
+  description = "Kubernetes ServiceAccount (namespace:name) the backup CronJob runs as, for the IRSA trust policy"
+  type        = string
+  default     = "jerney:jerney-db-backup"
+}

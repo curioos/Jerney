@@ -1,0 +1,67 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-container-requests-limits
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - Deployment
+                - StatefulSet
+      validate:
+        message: "Containers in namespace jerney must set resources.requests and resources.limits for both cpu and memory."
+        foreach:
+          - list: "request.object.spec.template.spec.containers"
+            pattern:
+              resources:
+                requests:
+                  memory: "?*"
+                  cpu: "?*"
+                limits:
+                  memory: "?*"
+                  cpu: "?*"
+          - list: "request.object.spec.template.spec.initContainers || `[]`"
+            pattern:
+              resources:
+                requests:
+                  memory: "?*"
+                  cpu: "?*"
+                limits:
+                  memory: "?*"
+                  cpu: "?*"
+    - name: require-cronjob-container-requests-limits
+      match:
+        any:
+          - resources:
+              namespaces:
+                - jerney
+              kinds:
+                - CronJob
+      validate:
+        message: "Containers in namespace jerney must set resources.requests and resources.limits for both cpu and memory."
+        foreach:
+          - list: "request.object.spec.jobTemplate.spec.template.spec.containers"
+            pattern:
+              resources:
+                requests:
+                  memory: "?*"
+                  cpu: "?*"
+                limits:
+                  memory: "?*"
+                  cpu: "?*"
+          - list: "request.object.spec.jobTemplate.spec.template.spec.initContainers || `[]`"
+            pattern:
+              resources:
+                requests:
+                  memory: "?*"
+                  cpu: "?*"
+                limits:
+                  memory: "?*"
+                  cpu: "?*"

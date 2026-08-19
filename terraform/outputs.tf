@@ -24,5 +24,10 @@ output "region" {
   value       = var.aws_region
 }
 
+output "pg_backup_irsa_role_arn" {
+  description = "IRSA role ARN to paste into k8s/backup.yaml's ServiceAccount annotation (eks.amazonaws.com/role-arn)"
+  value       = module.pg_backup_irsa.iam_role_arn
+}
+
 # Use this command to configure kubectl after apply:
 # aws eks update-kubeconfig --region <region> --name <cluster_name>

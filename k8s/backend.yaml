@@ -37,6 +37,13 @@ spec:
                 sleep 3
               done
               echo "DB is ready!"
+          resources:
+            requests:
+              cpu: 25m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
       containers:
         - name: backend
           image: ghcr.io/curioos/jerney/jerney-backend:c51d837
@@ -65,6 +72,14 @@ spec:
                 secretKeyRef:
                   name: jerney-db-secret
                   key: POSTGRES_DB
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jerney-backend-secret
+                  key: JWT_SECRET
+            - name: FRONTEND_URL
+              # Must match the frontend's public origin (NodePort/LB/ingress URL) for CORS to work.
+              value: "http://localhost"
           resources:
             requests:
               cpu: 100m

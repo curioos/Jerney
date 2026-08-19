@@ -1,0 +1,6 @@
+aws_region               = "ap-south-1"
+environment              = "dev"
+state_bucket_name        = "jerney-tf-state-REPLACE_WITH_YOUR_ACCOUNT_ID"
+lock_table_name          = "jerney-tf-lock"
+pg_backup_bucket_name    = "jerney-pg-backups-REPLACE_WITH_YOUR_ACCOUNT_ID"
+pg_backup_retention_days = 30

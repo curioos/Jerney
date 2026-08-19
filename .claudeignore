@@ -1,0 +1,56 @@
+# Credentials and secrets
+.env
+.env.*
+*.pem
+*.key
+id_rsa
+id_ed25519
+kubeconfig
+*kubeconfig*
+*-secret.yaml
+secrets.yaml
+credentials
+.aws/
+
+# Terraform state and sensitive vars
+*.tfstate
+*.tfstate.backup
+.terraform/
+terraform.tfvars
+*.auto.tfvars
+crash.log
+
+# Runtime data
+node_modules/
+.npm/
+__pycache__/
+*.pyc
+.cache/
+tmp/
+temp/
+
+# Docker artifacts
+*.tar
+*.gz
+.docker/
+
+# Monitoring runtime data (config files are fine)
+data/
+grafana-data/
+prometheus-data/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/settings.json
+
+# Git
+.git/
+
+# Build outputs
+dist/
+build/
+coverage/
