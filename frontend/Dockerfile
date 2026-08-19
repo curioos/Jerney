@@ -9,6 +9,10 @@ RUN npm run build
 # ---- Production stage ----
 FROM nginx:1.27-alpine AS production
 
+# Security: pull latest Alpine security patches — base image can lag behind
+# its own package index between rebuilds (libssl, libxml2, zlib, etc.)
+RUN apk --no-cache upgrade
+
 # Security: remove default nginx config
 RUN rm -rf /etc/nginx/conf.d/default.conf /usr/share/nginx/html/*
 
