@@ -1,6 +1,10 @@
-compact:
-  - CKV_AWS_39   # Public access to EKS endpoint (needed for kubectl)
-  - CKV_AWS_58   # EKS public endpoint (intentional for dev access)
+skip-check:
+  - CKV_AWS_39     # Public EKS endpoint (needed for kubectl access, intentional for dev)
+  - CKV_AWS_58     # EKS public endpoint (intentional for dev access)
+  - CKV_AWS_18     # S3 access logging — no separate log-destination bucket in this lab
+  - CKV_AWS_144    # S3 cross-region replication — single-region lab
+  - CKV2_AWS_62    # S3 event notifications — no consumer (SNS/SQS/Lambda) exists
+  - CKV_TF_1       # Module commit-hash pinning — these are Registry sources pinned by version=, not git sources
 soft-fail: false
 framework:
   - terraform

@@ -174,17 +174,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Checkov on Terraform
+        # directory/framework/skip-check are read from .checkov.yml at the repo
+        # root — kept there (not duplicated here) so there's one source of
+        # truth; a previous version of this step duplicated them here, drifted
+        # out of sync, and masked a typo in .checkov.yml that crashed the
+        # config parser entirely once continue-on-error stopped hiding it.
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: terraform/
-          framework: terraform
           soft_fail: false
-          # CKV_AWS_39/58: public EKS endpoint (intentional for dev kubectl access)
-          # CKV_AWS_18:    S3 access logging — no separate log-destination bucket in this lab
-          # CKV_AWS_144:   S3 cross-region replication — single-region lab, same tradeoff class as the EKS endpoint
-          # CKV2_AWS_62:   S3 event notifications — no consumer (SNS/SQS/Lambda) exists
-          # CKV_TF_1:      module commit-hash pinning — these are Terraform Registry sources pinned by `version =`, not git sources, which is what this check targets
-          skip_check: CKV_AWS_39,CKV_AWS_58,CKV_AWS_18,CKV_AWS_144,CKV2_AWS_62,CKV_TF_1
           output_format: cli
 
       - name: Run Checkov on Kubernetes manifests
