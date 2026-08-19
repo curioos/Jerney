@@ -54,7 +54,7 @@ spec:
                 - ALL
       containers:
         - name: backend
-          image: ghcr.io/curioos/jerney/jerney-backend:c51d837
+          image: ghcr.io/curioos/jerney/jerney-backend:4a07579
           ports:
             - containerPort: 5000
               protocol: TCP
